@@ -1,0 +1,46 @@
+        -:    0:Source:btree.h
+        -:    0:Graph:btree.gcno
+        -:    0:Data:btree.gcda
+        -:    0:Runs:1
+        -:    0:Programs:1
+        -:    1:#include <stdint.h>
+        -:    2:#include <iostream>
+        -:    3:#include <cstdlib>
+        -:    4:#include <vector>
+        -:    5:#include <stack>
+        -:    6:
+        -:    7:namespace bt
+        -:    8:{
+        -:    9:
+       16:   10:  struct bt_node
+        -:   11:  {
+        -:   12:    bool is_leaf;
+        -:   13:    uint32_t cur_size;
+        -:   14:    std::vector<std::pair<uint32_t, uint32_t> > values;
+        -:   15:    std::vector<bt_node*> ptrs;
+        -:   16:  };
+        -:   17:
+        -:   18:  class btree
+        -:   19:  {
+        -:   20:  
+        -:   21:    public:
+        -:   22:      btree(uint32_t degree);
+        -:   23:      bool search_kv(uint32_t key, uint32_t &value);
+        -:   24:      bool insert_kv(uint32_t key, uint32_t value);
+        -:   25:      //bool delete_kv(uint32_t key);
+        -:   26:
+        -:   27:      //Utitly functions
+        -:   28:      uint32_t bsearch_key(bt_node* n, uint32_t key);
+        -:   29:      bt_node* init_bt_node(bool type);
+        -:   30:      bt_node* get_root();
+        -:   31:    
+        -:   32:      //Debugging 
+        -:   33:      void print_tree(bt_node* n);
+        -:   34:      void print_node(bt_node* n);
+        -:   35:    
+        -:   36:    private:
+        -:   37:      uint32_t degree;
+        -:   38:      bt_node *root;
+        -:   39:  };
+        -:   40:
+        -:   41:} //namespace bt

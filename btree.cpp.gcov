@@ -1,0 +1,362 @@
+        -:    0:Source:btree.cpp
+        -:    0:Graph:btree.gcno
+        -:    0:Data:btree.gcda
+        -:    0:Runs:1
+        -:    0:Programs:1
+        -:    1:#include "btree.h"
+        -:    2:
+        -:    3://Represents number values. Implies there are DEG+1 pointers
+        -:    4:#define DEG 2 
+        -:    5:#define LEAF true
+        -:    6:#define INNER false
+        -:    7:#define STEAL 0
+        -:    8:#define MERGE 1
+        -:    9:
+        -:   10:namespace bt 
+        -:   11:{
+        -:   12:
+        -:   13:  //Constructor 
+        1:   14:  btree::btree(uint32_t degree) 
+        -:   15:  {
+        1:   16:    this->degree = degree;
+        1:   17:    this->root = NULL;
+        1:   18:  }
+        -:   19:
+        -:   20:
+        1:   21:  bt_node* btree::get_root() 
+        -:   22:  {
+        1:   23:    return root;
+        -:   24:  }
+        -:   25:
+        -:   26:
+        -:   27:  //Binary search for key in a given node
+        -:   28:  //Returns the index of the either the  /
+        -:   29:  //exact match index or a index of a key/
+        -:   30:  //whose value is next least value for  /
+        -:   31:  //the given key.
+       26:   32:  uint32_t btree::bsearch_key(bt_node *n, uint32_t key) 
+        -:   33:  {
+        -:   34:    
+       26:   35:    int32_t start_idx = 0, end_idx = n->values.size()-1;
+        -:   36:
+       72:   37:    while(end_idx >= start_idx)
+        -:   38:    {
+       24:   39:      uint32_t mid_idx = (start_idx + end_idx)/2;
+        -:   40:
+       24:   41:      if(n->values[mid_idx].first == key) 
+        -:   42:      {
+        1:   43:        return mid_idx;
+        -:   44:      }
+       23:   45:      else if(n->values[mid_idx].first < key)
+        -:   46:      {
+       10:   47:        start_idx = mid_idx+1;
+        -:   48:      }
+        -:   49:      else
+        -:   50:      {
+       13:   51:        end_idx = mid_idx-1;
+        -:   52:      }
+        -:   53:    }
+        -:   54:
+       25:   55:    return start_idx;
+        -:   56:  }
+        -:   57:
+        -:   58:  //Search the corresponding value for a given key
+        -:   59:  //True: Found and value contains the find
+        -:   60:  //False: Not found
+        1:   61:  bool btree::search_kv(uint32_t key, uint32_t &value)
+        -:   62:  {
+        -:   63:
+        1:   64:    bt_node *temp = this->root;
+        -:   65:
+        9:   66:    while(temp) 
+        -:   67:    { 
+        5:   68:      uint32_t idx = bsearch_key(temp, key);
+        5:   69:      if(temp->is_leaf && key == temp->values[idx].first) 
+        -:   70:      {
+        1:   71:        value = temp->values[idx].second;
+        1:   72:        return true;
+        -:   73:      }
+        -:   74:      else 
+        -:   75:      {
+        4:   76:        temp = temp->ptrs[idx];
+        -:   77:      }
+        -:   78:    }
+        -:   79:
+    #####:   80:    return false;
+        -:   81:  }
+        -:   82:
+        -:   83:  //Creates bt_node and does basic init 
+       16:   84:  bt_node* btree::init_bt_node(bool type)
+        -:   85:  {
+       16:   86:    bt_node *n = new bt_node;
+       16:   87:    n->is_leaf = type;
+        -:   88:    //n->values.size() = 0;
+       16:   89:    return n;
+        -:   90:  }
+        -:   91:
+        -:   92:  //Inserts the give key-value pair to the btree
+        6:   93:  bool btree::insert_kv(uint32_t key, uint32_t value) 
+        -:   94:  {
+        6:   95:    bt_node *temp_node = NULL;
+        6:   96:    uint32_t idx = 0;
+       12:   97:    std::stack<bt_node*> stk;
+        -:   98:
+        -:   99:    //Creating root node, if not alreay available
+        6:  100:    if(!root) 
+        -:  101:    {
+        1:  102:      root = init_bt_node(LEAF);
+        1:  103:      root->values.push_back(std::make_pair(key, value));
+        1:  104:      root->ptrs.insert(root->ptrs.begin(), {NULL, NULL});
+        -:  105:      //root->values.size()++;
+        1:  106:      return true;
+        -:  107:    }
+        -:  108:   
+        -:  109:    //Finding the leaf node for initial insert /
+        -:  110:    //prior to spliting, if needed
+        5:  111:    temp_node = root;
+        5:  112:    stk.push(temp_node);
+       23:  113:    while(temp_node) 
+        -:  114:    {
+       14:  115:      idx = bsearch_key(temp_node, key);
+       14:  116:      if(temp_node->is_leaf) 
+        5:  117:        break;
+        9:  118:      temp_node = temp_node->ptrs[idx];
+        9:  119:      stk.push(temp_node);
+        -:  120:    }
+        -:  121:    
+        5:  122:    if(!temp_node) 
+    #####:  123:      return false;
+        -:  124:
+        -:  125:
+        -:  126:    //Inserting to the leaf node
+       15:  127:    temp_node->values.insert(temp_node->values.begin()+idx,
+       20:  128:                            std::make_pair(key, value));
+        5:  129:    temp_node->ptrs.push_back(NULL);
+        -:  130:    //temp_node->values.size()++;
+        5:  131:    stk.pop();
+        -:  132:
+        -:  133:
+        -:  134:    //Keep spliting till the tree is normalized
+        -:  135:    //while(temp_node->values.size() >= degree)
+       19:  136:    while(temp_node->values.size() >= degree)
+        -:  137:    {
+       11:  138:      bt_node *parent = NULL;
+       11:  139:      bt_node *sib_node = init_bt_node(temp_node->is_leaf);
+        -:  140:      //uint32_t sidx = temp_node->values.size()/2;
+       11:  141:      uint32_t sidx = temp_node->values.size()/2;
+       11:  142:      uint32_t temp_key = temp_node->values[sidx].first;
+       11:  143:      uint32_t temp_value = temp_node->values[sidx].second;
+        -:  144:      uint32_t it;
+        -:  145:
+        -:  146:      //Moving the half the key-value pairs to new node
+       11:  147:      if(sib_node->is_leaf) 
+        -:  148:      { 
+        -:  149:        //LEAF node
+        5:  150:        sib_node->ptrs.push_back(NULL);
+       10:  151:        for(it = sidx; it < temp_node->values.size(); ++it) 
+        -:  152:        {
+        5:  153:          sib_node->values.push_back(std::move(temp_node->values[it]));
+        5:  154:          sib_node->ptrs.push_back(NULL); //No pointers to move. 
+        -:  155:          //sib_node->values.size()++;
+        -:  156:        }
+        -:  157:      } 
+        -:  158:      else 
+        -:  159:      { 
+        -:  160:        //INNER node
+        6:  161:        for(it = sidx+1; it < temp_node->values.size(); ++it)
+        -:  162:        {
+    #####:  163:          sib_node->values.push_back(std::move(temp_node->values[it]));
+    #####:  164:          sib_node->ptrs.push_back(std::move(temp_node->ptrs[it]));
+        -:  165:          //sib_node->values.size()++;
+        -:  166:        }
+        6:  167:        sib_node->ptrs.push_back(std::move(temp_node->ptrs[it]));
+        -:  168:      }
+        -:  169:      //temp_node->values.size() -= (sidx+1);
+       33:  170:      temp_node->values.erase(temp_node->values.begin()+sidx,
+       44:  171:                                            temp_node->values.end());
+        -:  172:
+        -:  173:      //Inserting the new sibling to the parent node
+        -:  174:      
+        -:  175:      //Root node requires split
+       11:  176:      if(stk.empty()) 
+        -:  177:      {
+        4:  178:        bt_node *new_root = init_bt_node(INNER);
+        4:  179:        new_root->values.push_back(std::make_pair(temp_key, temp_value));
+        4:  180:        new_root->ptrs.insert(new_root->ptrs.begin(), {temp_node, sib_node});
+        -:  181:        //new_root->values.size()++;
+        4:  182:        root = new_root; //New root node
+        4:  183:        return true;
+        -:  184:      } 
+        -:  185:
+        -:  186:      //Inner node requires split
+        7:  187:      parent = stk.top();
+        7:  188:      stk.pop();
+        -:  189:      
+        7:  190:      idx = bsearch_key(parent, temp_key);
+       14:  191:      parent->values.insert(parent->values.begin()+idx, 
+       21:  192:                          std::make_pair(temp_key, temp_value));
+       14:  193:      parent->ptrs.insert(parent->ptrs.begin()+idx+1,
+        7:  194:                          sib_node);
+        -:  195:      //parent->values.size()++;
+        7:  196:      temp_node = parent;
+        -:  197:    }
+        1:  198:    return true;
+        -:  199:  }
+        -:  200:
+        -:  201: /*
+        -:  202:  bool btree::delete_kv(uint32_t key) {
+        -:  203:    bt_node *temp_node = NULL;
+        -:  204:    std::stack<std::pair<bt_node*, uint32_t> > stk; 
+        -:  205:    
+        -:  206:    if(!root) 
+        -:  207:      return false;
+        -:  208:
+        -:  209:    //Search for the leaf node
+        -:  210:    temp_node = root;
+        -:  211:    while(temp_node) 
+        -:  212:    {
+        -:  213:      idx = bsearch_key(temp_node, key);
+        -:  214:      stk.push(std::make_pair(temp_node,idx));
+        -:  215:      
+        -:  216:      if(temp_node->is_leaf) 
+        -:  217:      {
+        -:  218:        stk.pop();
+        -:  219:        break;
+        -:  220:      }
+        -:  221:
+        -:  222:      temp_node = temp_node->ptrs[idx];
+        -:  223:    }
+        -:  224:
+        -:  225:    //Key not found in leaf node
+        -:  226:    if(temp->values[idx].first != key) 
+        -:  227:      return false;
+        -:  228:
+        -:  229:    //Deleted the key value pair from the leaf node
+        -:  230:    temp->values.erase(temp->values.begin()+idx);
+        -:  231:    temp->ptrs.erase(temp->ptrs.begin()+idx+1);
+        -:  232:    //temp->values.size()--;
+        -:  233:
+        -:  234:    //Root is leaf node or the selected leaf node 
+        -:  235:    //still satisfies btree requirements even after 
+        -:  236:    //deletion
+        -:  237:    //if(temp == root || temp->values.size() >= (DEG-1)/2) 
+        -:  238:    //  return true;
+        -:  239:
+        -:  240:    //while(temp != root || temp->values.size() < (DEG-1)/2) 
+        -:  241:    while(temp != root || temp->values.size() < DEG/2) 
+        -:  242:    {
+        -:  243:
+        -:  244:      bt_node *parent = NULL, *sibbling = NULL;
+        -:  245:
+        -:  246:      //Adjustment is required after deletion
+        -:  247:      //1. Steal
+        -:  248:      //2. Merge
+        -:  249:      parent = stk.top().first;
+        -:  250:      parent_idx  = stk.top().second;
+        -:  251:      stk.pop();
+        -:  252:
+        -:  253:      int64_t left_sib = -1, right_sib = -1;
+        -:  254:      int64_t sib_idx = -1;
+        -:  255:
+        -:  256:      //Number of elements required by the target node to be half full
+        -:  257:      req_size = (DEG/2) - temp->values.size();
+        -:  258:
+        -:  259:      //Pick a sibbling to try stealing from
+        -:  260:      if(parent_idx-1 >= 0) 
+        -:  261:        left_sib  = parent_idx-1;
+        -:  262:      else if(parent_idx+1 <= parent->values.size()) 
+        -:  263:        right_sib = parent_idx+1;
+        -:  264:      
+        -:  265:      if(left_sib == -1) sib_idx = right_sib;
+        -:  266:      else if(right_sib == -1) sib_idx = left_sib;
+        -:  267:      else
+        -:  268:      {
+        -:  269:        sib_idx = (parent->ptrs[left_sib]->values.size() 
+        -:  270:                >= parent->ptrs[right_sib]->values.size())?left_sib:right_sib;
+        -:  271:      }
+        -:  272:
+        -:  273:      //Decide to steal or merge
+        -:  274:      sibbling = parent->ptrs[sib_idx];
+        -:  275:      //Computes the size of the sibbling after stealing 
+        -:  276:      //Decides to steal or merge
+        -:  277:      mode = ((sibbling->values.size() - req_size) >= (DEG/2))?STEAL:MERGE;
+        -:  278:      
+        -:  279:      switch(mode)
+        -:  280:      {
+        -:  281:        case STEAL:
+        -:  282:          //Sibbling is left node
+        -:  283:          if(sib_idx < parent_idx)
+        -:  284:          {
+        -:  285:            uint32_t iter;
+        -:  286:            for(iter=sibbling->values.size()-1; 
+        -:  287:            iter>sibbling->values.size()-1-req_size; iter--) 
+        -:  288:            {
+        -:  289:              temp->values.insert(temp->values.begin(),
+        -:  290:                          std::move(sibbling->values[iter]));
+        -:  291:              temp->ptrs.insert(temp->ptrs.begin(), NULL);             
+        -:  292:            }
+        -:  293:
+        -:  294:
+        -:  295:          }
+        -:  296:          break;
+        -:  297:
+        -:  298:        case MERGE:
+        -:  299:          break;
+        -:  300:      }
+        -:  301:
+        -:  302:      temp = parent;
+        -:  303:    }
+        -:  304:
+        -:  305:    return true;
+        -:  306:  
+        -:  307:  }
+        -:  308:  */
+        -:  309:
+        -:  310:
+    #####:  311:  void btree::print_node(bt_node *n){
+        -:  312:    uint32_t it;
+        -:  313:    
+    #####:  314:    for(it=0;it<n->values.size();it++)
+        -:  315:    {
+    #####:  316:      std::cout<<n->values[it].first<<"\t";
+        -:  317:    }
+    #####:  318:    std::cout<<std::endl;
+    #####:  319:  }
+        -:  320:
+       28:  321:  void btree::print_tree(bt_node *n)
+        -:  322:  {
+       28:  323:    uint32_t i = 0;
+       28:  324:    if(!n) 
+       12:  325:      return;
+        -:  326:   
+       27:  327:    for(i=0;i<n->values.size();i++)
+        -:  328:    { 
+       11:  329:        print_tree(n->ptrs[i]);
+       11:  330:        std::cout<<n->values[i].first<<std::endl;
+        -:  331:    }
+       16:  332:    print_tree(n->ptrs[i]);
+        -:  333:  }
+        -:  334:
+        -:  335:};
+        -:  336:
+        -:  337:using namespace bt;
+        -:  338:
+        1:  339:int main()
+        -:  340:{
+        -:  341:
+        -:  342:    if(DEG < 2) return -1;
+        1:  343:    btree *bt = new btree(DEG);
+        1:  344:    uint32_t val = 0;
+        1:  345:    bt->insert_kv(95,1);
+        1:  346:    bt->insert_kv(21,2);
+        1:  347:    bt->insert_kv(7,3);
+        1:  348:    bt->insert_kv(17,4);
+        1:  349:    bt->insert_kv(44,5);
+        1:  350:    bt->insert_kv(92,6);
+        1:  351:    bt->print_tree(bt->get_root());
+        -:  352:
+        1:  353:    if(bt->search_kv(44, val))
+        1:  354:      std::cout<<"Search Key = 44, Value = "<<val<<std::endl;
+        -:  355:
+        1:  356:    return 0;
+        3:  357:}
